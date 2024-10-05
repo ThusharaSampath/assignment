@@ -5,8 +5,10 @@
 #include <stdlib.h>
 #include <time.h>
 #include <pthread.h>
+#include <math.h>
 
 #define MAX_VALUE 65535 // 2^16 - 1
+#define MAX_THREAD_COUNT 4
 
 typedef struct
 {
@@ -142,9 +144,9 @@ void run_test(int type, int n, int m, double mMember, double mInsert, double mDe
     case 1: // read write lock
     {
         RwlLinkedList *rwl_list = malloc(sizeof(RwlLinkedList));
-        printf("Initializing rwl list\n");
+        // printf("Initializing rwl list\n");
         rwl_initialize_list(rwl_list);
-        printf("Populating rwl list\n");
+        // printf("Populating rwl list\n");
         populate_rwl_list(rwl_list, randNumbers, n);
         list = rwl_list;
         break;
@@ -152,9 +154,9 @@ void run_test(int type, int n, int m, double mMember, double mInsert, double mDe
     case 2: // mutex
     {
         MtxLinkedList *mtx_list = malloc(sizeof(MtxLinkedList));
-        printf("Initializing mtx list\n");
+        // printf("Initializing mtx list\n");
         mtx_initialize_list(mtx_list);
-        printf("Populating mtx list\n");
+        // printf("Populating mtx list\n");
         populate_mtx_list(mtx_list, randNumbers, n);
         list = mtx_list;
         break;
@@ -162,9 +164,9 @@ void run_test(int type, int n, int m, double mMember, double mInsert, double mDe
     default: // serial
     {
         SerialLinkedList *serial_list = malloc(sizeof(SerialLinkedList));
-        printf("Initializing serial list\n");
+        // printf("Initializing serial list\n");
         serial_initialize_list(serial_list);
-        printf("Populating serial list\n");
+        // printf("Populating serial list\n");
         populate_serial_list(serial_list, randNumbers, n);
         list = serial_list;
         break;
@@ -187,7 +189,7 @@ void run_test(int type, int n, int m, double mMember, double mInsert, double mDe
 
     clock_t start = clock();
 
-    printf("Creating %d threads\n", t);
+    // printf("Creating %d threads\n", t);
     for (int i = 0; i < t; i++)
     {
         pthread_create(&threads[i], NULL, perform_operations, &thread_args[i]);
@@ -205,19 +207,19 @@ void run_test(int type, int n, int m, double mMember, double mInsert, double mDe
     {
     case 1:
     {
-        printf("Read-write lock implementation time: %f seconds\n", cpu_time_used);
+        // printf("Read-write lock implementation time: %f seconds\n", cpu_time_used);
         rwl_cleanup_list((RwlLinkedList *)list);
         break;
     }
     case 2:
     {
-        printf("Mutex implementation time: %f seconds\n", cpu_time_used);
+        // printf("Mutex implementation time: %f seconds\n", cpu_time_used);
         mtx_cleanup_list((MtxLinkedList *)list);
         break;
     }
     default:
     {
-        printf("Serial implementation time: %f seconds\n", cpu_time_used);
+        // printf("Serial implementation time: %f seconds\n", cpu_time_used);
         serial_cleanup_list((SerialLinkedList *)list);
         break;
     }
@@ -236,11 +238,90 @@ void printArray(int *arr, int size)
     printf("\n");
 }
 
+double calculate_average(double *values, int count)
+{
+    double sum = 0;
+    for (int i = 0; i < count; i++)
+    {
+        sum += values[i];
+    }
+    return sum / count;
+}
+
+double calculate_std_dev(double *values, int count, double average)
+{
+    double sum_squared_diff = 0;
+    for (int i = 0; i < count; i++)
+    {
+        double diff = values[i] - average;
+        sum_squared_diff += diff * diff;
+    }
+    return sqrt(sum_squared_diff / count);
+}
+
+void run_test_suite(int n, int m, double mMember, double mInsert, double mDelete, int sample_count)
+{
+    int thread_counts[] = {1, 2, 4, 8};
+    int num_thread_counts = sizeof(thread_counts) / sizeof(thread_counts[0]);
+
+    printf("Running tests with n=%d, m=%d, mMember=%.2f, mInsert=%.2f, mDelete=%.2f, sample_count=%d\n",
+           n, m, mMember, mInsert, mDelete, sample_count);
+    printf("|-----------------|---------------|---------|--------|\n");
+    printf("|  Implementation | No of threads | Average |   Std  |\n");
+    printf("|-----------------|---------------|---------|--------|\n");
+
+    for (int impl = 1; impl <= 3; impl++)
+    {
+        const char *impl_name;
+        switch (impl)
+        {
+        case 1:
+            impl_name = "Read-Write lock";
+            break;
+        case 2:
+            impl_name = "Mutex";
+            break;
+        case 3:
+            impl_name = "Serial";
+            break;
+        }
+
+        for (int t_idx = 0; t_idx < num_thread_counts; t_idx++)
+        {
+            int t = thread_counts[t_idx];
+            if (impl == 3 && t > 1)
+                continue; // Skip serial implementation for thread counts > 1
+
+            double *times = malloc(sizeof(double) * sample_count);
+
+            for (int sample = 0; sample < sample_count; sample++)
+            {
+                int *randNumbers = malloc(sizeof(int) * n);
+                generate_unique_random_numbers(randNumbers, n);
+
+                clock_t start = clock();
+                run_test(impl, n, m, mMember, mInsert, mDelete, t, randNumbers);
+                clock_t end = clock();
+
+                times[sample] = ((double)(end - start)) / CLOCKS_PER_SEC;
+                free(randNumbers);
+            }
+
+            double avg = calculate_average(times, sample_count);
+            double std_dev = calculate_std_dev(times, sample_count, avg);
+
+            printf("| %-15s | %-13d | %-7.4f | %-3.4f |\n", impl_name, t, avg, std_dev);
+            printf("|-----------------|---------------|---------|--------|\n");
+            free(times);
+        }
+    }
+}
+
 int main(int argc, char *argv[])
 {
-    if (argc != 7)
+    if (argc != 8)
     {
-        printf("Usage: %s <n> <m> <mMember> <mInsert> <mDelete> <t>\n", argv[0]);
+        printf("Usage: %s <n> <m> <mMember> <mInsert> <mDelete> <t> <sample_count>\n", argv[0]);
         return 1;
     }
 
@@ -250,26 +331,11 @@ int main(int argc, char *argv[])
     double mInsert = atof(argv[4]);
     double mDelete = atof(argv[5]);
     int t = atoi(argv[6]);
-
-    printf("Running tests with n=%d, m=%d, mMember=%.2f, mInsert=%.2f, mDelete=%.2f, t=%d\n",
-           n, m, mMember, mInsert, mDelete, t);
+    int sample_count = atoi(argv[7]);
 
     srand(time(NULL));
 
-    int *randNumbers = malloc(sizeof(int) * n);
-    generate_unique_random_numbers(randNumbers, n);
+    run_test_suite(n, m, mMember, mInsert, mDelete, sample_count);
 
-    run_test(1, n, m, mMember, mInsert, mDelete, t, randNumbers); // Read-write lock test
-    // printArray(randNumbers, n);
-    run_test(2, n, m, mMember, mInsert, mDelete, t, randNumbers); // Mutex test
-    // printArray(randNumbers, n);
-    if (t == 1)
-    {
-        run_test(3, n, m, mMember, mInsert, mDelete, t, randNumbers); // Serial test
-    }
-    // printArray(randNumbers, n);
-    free(randNumbers);
     return 0;
-
-    int thread_counts[] = {1, 2, 4, 8};
 }
