@@ -1,6 +1,6 @@
 Introduction:
 
-This program generate performance report for, 
+This program generates a performance report for three types of linked list implementations:
 1. Read-Write lock based linked list
 2. Mutex based linked list
 3. Serial linked list
@@ -32,18 +32,18 @@ Running tests with n=1000, m=10000, mMember=0.50, mInsert=0.25, mDelete=0.25, sa
 
 Usage instructions:
 
-Step 1 : Generate executable file
+Step 1: Compile the Program
 
 gcc -O2 -pthread -o linked_list_test mtx_linked_list.c rwl_linked_list.c linked_list_driver.c serial_linked_list.c
 
-Step 2 : Run the executable file
+Step 2: Run the Program
 
 ./linked_list_test <n> <m> <mMember> <mInsert> <mDelete> <sample_count>
 
 where,
-n = number of initial nodes in the linked list
-m = number of operations to be performed on the linked list
-mMember = fraction of operations that are Member operations
-mInsert = fraction of operations that are Insert operations
-mDelete = fraction of operations that are Delete operations
-sample_count = number of times the test should be run per each configuration
+- n: Number of initial nodes in the linked list.
+- m: Number of operations to perform on the linked list.
+- mMember: Fraction of "Member" operations.
+- mInsert: Fraction of "Insert" operations.
+- mDelete: Fraction of "Delete" operations.
+- sample_count: Number of times the test should be repeated for each configuration.
