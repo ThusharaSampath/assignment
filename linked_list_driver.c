@@ -9,6 +9,8 @@
 
 #define MAX_VALUE 65535 // 2^16 - 1
 #define MAX_THREAD_COUNT 4
+#define CONFIDENTIAL_INTERVAL_Z 1.96
+#define ACCURACY_R 5
 
 typedef struct
 {
@@ -259,6 +261,13 @@ double calculate_std_dev(double *values, int count, double average)
     return sqrt(sum_squared_diff / count);
 }
 
+int calculate_minimum_sample_count(double s, double x)
+{
+    double z = CONFIDENTIAL_INTERVAL_Z;
+    double r = ACCURACY_R;
+    return (int)(((100 * z * s * 100 * z * s) / (r * x * r * x)));
+}
+
 void run_test_suite(int n, int m, double mMember, double mInsert, double mDelete, int sample_count)
 {
     int thread_counts[] = {1, 2, 4, 8};
@@ -266,9 +275,9 @@ void run_test_suite(int n, int m, double mMember, double mInsert, double mDelete
 
     printf("Running tests with n=%d, m=%d, mMember=%.2f, mInsert=%.2f, mDelete=%.2f, sample_count=%d\n",
            n, m, mMember, mInsert, mDelete, sample_count);
-    printf("|-----------------|---------------|---------|--------|\n");
-    printf("|  Implementation | No of threads | Average |   Std  |\n");
-    printf("|-----------------|---------------|---------|--------|\n");
+    printf("|-----------------|---------------|---------|--------|-------------------|\n");
+    printf("|  Implementation | No of threads | Average |   Std  |  Min sample count |\n");
+    printf("|-----------------|---------------|---------|--------|-------------------|\n");
 
     for (int impl = 1; impl <= 3; impl++)
     {
@@ -309,9 +318,10 @@ void run_test_suite(int n, int m, double mMember, double mInsert, double mDelete
 
             double avg = calculate_average(times, sample_count);
             double std_dev = calculate_std_dev(times, sample_count, avg);
+            int min_sample_count = calculate_minimum_sample_count(std_dev, avg);
 
-            printf("| %-15s | %-13d | %-7.4f | %-3.4f |\n", impl_name, t, avg, std_dev);
-            printf("|-----------------|---------------|---------|--------|\n");
+            printf("| %-15s | %-13d | %-7.4f | %-3.4f | %-17d |\n", impl_name, t, avg, std_dev, min_sample_count);
+            printf("|-----------------|---------------|---------|--------|-------------------|\n");
             free(times);
         }
     }
@@ -319,9 +329,9 @@ void run_test_suite(int n, int m, double mMember, double mInsert, double mDelete
 
 int main(int argc, char *argv[])
 {
-    if (argc != 8)
+    if (argc != 7)
     {
-        printf("Usage: %s <n> <m> <mMember> <mInsert> <mDelete> <t> <sample_count>\n", argv[0]);
+        printf("Usage: %s <n> <m> <mMember> <mInsert> <mDelete> <sample_count>\n", argv[0]);
         return 1;
     }
 
@@ -330,8 +340,7 @@ int main(int argc, char *argv[])
     double mMember = atof(argv[3]);
     double mInsert = atof(argv[4]);
     double mDelete = atof(argv[5]);
-    int t = atoi(argv[6]);
-    int sample_count = atoi(argv[7]);
+    int sample_count = atoi(argv[6]);
 
     srand(time(NULL));
 
