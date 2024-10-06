@@ -138,7 +138,7 @@ void *perform_operations(void *arg)
     return NULL;
 }
 
-void run_test(int type, int n, int m, double mMember, double mInsert, double mDelete, int t, int *randNumbers)
+double run_test(int type, int n, int m, double mMember, double mInsert, double mDelete, int t, int *randNumbers)
 {
     void *list;
     switch (type)
@@ -146,9 +146,7 @@ void run_test(int type, int n, int m, double mMember, double mInsert, double mDe
     case 1: // read write lock
     {
         RwlLinkedList *rwl_list = malloc(sizeof(RwlLinkedList));
-        // printf("Initializing rwl list\n");
         rwl_initialize_list(rwl_list);
-        // printf("Populating rwl list\n");
         populate_rwl_list(rwl_list, randNumbers, n);
         list = rwl_list;
         break;
@@ -156,9 +154,7 @@ void run_test(int type, int n, int m, double mMember, double mInsert, double mDe
     case 2: // mutex
     {
         MtxLinkedList *mtx_list = malloc(sizeof(MtxLinkedList));
-        // printf("Initializing mtx list\n");
         mtx_initialize_list(mtx_list);
-        // printf("Populating mtx list\n");
         populate_mtx_list(mtx_list, randNumbers, n);
         list = mtx_list;
         break;
@@ -166,9 +162,7 @@ void run_test(int type, int n, int m, double mMember, double mInsert, double mDe
     default: // serial
     {
         SerialLinkedList *serial_list = malloc(sizeof(SerialLinkedList));
-        // printf("Initializing serial list\n");
         serial_initialize_list(serial_list);
-        // printf("Populating serial list\n");
         populate_serial_list(serial_list, randNumbers, n);
         list = serial_list;
         break;
@@ -189,9 +183,9 @@ void run_test(int type, int n, int m, double mMember, double mInsert, double mDe
         thread_args[i].type = type;
     }
 
+    // Start measuring time here
     clock_t start = clock();
 
-    // printf("Creating %d threads\n", t);
     for (int i = 0; i < t; i++)
     {
         pthread_create(&threads[i], NULL, perform_operations, &thread_args[i]);
@@ -202,6 +196,7 @@ void run_test(int type, int n, int m, double mMember, double mInsert, double mDe
         pthread_join(threads[i], NULL);
     }
 
+    // Stop measuring time here
     clock_t end = clock();
     double cpu_time_used = ((double)(end - start)) / CLOCKS_PER_SEC;
 
@@ -209,24 +204,23 @@ void run_test(int type, int n, int m, double mMember, double mInsert, double mDe
     {
     case 1:
     {
-        // printf("Read-write lock implementation time: %f seconds\n", cpu_time_used);
         rwl_cleanup_list((RwlLinkedList *)list);
         break;
     }
     case 2:
     {
-        // printf("Mutex implementation time: %f seconds\n", cpu_time_used);
         mtx_cleanup_list((MtxLinkedList *)list);
         break;
     }
     default:
     {
-        // printf("Serial implementation time: %f seconds\n", cpu_time_used);
         serial_cleanup_list((SerialLinkedList *)list);
         break;
     }
     }
     free(list);
+
+    return cpu_time_used;
 }
 
 void printArray(int *arr, int size)
@@ -308,11 +302,8 @@ void run_test_suite(int n, int m, double mMember, double mInsert, double mDelete
                 int *randNumbers = malloc(sizeof(int) * n);
                 generate_unique_random_numbers(randNumbers, n);
 
-                clock_t start = clock();
-                run_test(impl, n, m, mMember, mInsert, mDelete, t, randNumbers);
-                clock_t end = clock();
+                times[sample] = run_test(impl, n, m, mMember, mInsert, mDelete, t, randNumbers);
 
-                times[sample] = ((double)(end - start)) / CLOCKS_PER_SEC;
                 free(randNumbers);
             }
 
