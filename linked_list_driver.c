@@ -273,7 +273,7 @@ void run_test_suite(int n, int m, double mMember, double mInsert, double mDelete
     int thread_counts[] = {1, 2, 4, 8};
     int num_thread_counts = sizeof(thread_counts) / sizeof(thread_counts[0]);
 
-    printf("Running tests with n=%d, m=%d, mMember=%.2f, mInsert=%.2f, mDelete=%.2f, sample_count=%d\n",
+    printf("Running tests with n=%d, m=%d, mMember=%.3f, mInsert=%.3f, mDelete=%.3f, sample_count=%d\n",
            n, m, mMember, mInsert, mDelete, sample_count);
     printf("|-----------------|---------------|---------|--------|-------------------|\n");
     printf("|  Implementation | No of threads | Average |   Std  |  Min sample count |\n");
@@ -341,6 +341,10 @@ int main(int argc, char *argv[])
     double mInsert = atof(argv[4]);
     double mDelete = atof(argv[5]);
     int sample_count = atoi(argv[6]);
+
+    printf("member fraction: %f\n", mMember);
+    printf("insert fraction: %f\n", mInsert);
+    printf("delete fraction: %f\n", mDelete);
 
     srand(time(NULL));
 
