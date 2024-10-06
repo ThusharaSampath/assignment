@@ -342,10 +342,6 @@ int main(int argc, char *argv[])
     double mDelete = atof(argv[5]);
     int sample_count = atoi(argv[6]);
 
-    printf("member fraction: %f\n", mMember);
-    printf("insert fraction: %f\n", mInsert);
-    printf("delete fraction: %f\n", mDelete);
-
     srand(time(NULL));
 
     run_test_suite(n, m, mMember, mInsert, mDelete, sample_count);
